@@ -69,7 +69,7 @@ public interface RtmpPublisher {
     /**
      * obtain the ID of the peer if any
      */
-    int getServerId();
+    String getServerId();
 
     /**
      * set video resolution

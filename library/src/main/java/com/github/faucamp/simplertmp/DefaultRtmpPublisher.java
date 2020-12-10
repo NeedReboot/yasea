@@ -58,7 +58,7 @@ public class DefaultRtmpPublisher implements RtmpPublisher {
     }
 
     @Override
-    public final int getServerId() {
+    public final String getServerId() {
         return rtmpConnection.getServerId();
     }
 

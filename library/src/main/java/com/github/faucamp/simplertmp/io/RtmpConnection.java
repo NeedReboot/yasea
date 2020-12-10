@@ -72,7 +72,7 @@ public class RtmpConnection implements RtmpPublisher {
     private int transactionIdCounter = 0;
     private AmfString serverIpAddr;
     private AmfNumber serverPid;
-    private AmfNumber serverId;
+    private AmfString serverId;
     private int videoWidth;
     private int videoHeight;
     private int videoFrameCount;
@@ -635,12 +635,17 @@ public class RtmpConnection implements RtmpPublisher {
             objData = ((AmfObject) objData.getProperty("data"));
             serverIpAddr = (AmfString) objData.getProperty("srs_server_ip");
             serverPid = (AmfNumber) objData.getProperty("srs_pid");
-            serverId = (AmfNumber) objData.getProperty("srs_id");
+            if (objData.getProperty("srs_id") instanceof AmfNumber){
+                serverId=new AmfString(String.valueOf(((AmfNumber) objData.getProperty("srs_id")).getValue()));
+            }
+            else {
+                serverId = (AmfString) objData.getProperty("srs_id");
+            }
         }
         String info = "";
         info += serverIpAddr == null ? "" : " ip: " + serverIpAddr.getValue();
         info += serverPid == null ? "" : " pid: " + (int) serverPid.getValue();
-        info += serverId == null ? "" : " id: " + (int) serverId.getValue();
+        info += serverId == null ? "" : " id: " + serverId.getValue();
         return info;
     }
 
@@ -660,8 +665,8 @@ public class RtmpConnection implements RtmpPublisher {
     }
 
     @Override
-    public final int getServerId() {
-        return serverId == null ? 0 : (int) serverId.getValue();
+    public final String getServerId() {
+        return serverId == null ? "" : (String)serverId.getValue();
     }
 
     @Override
