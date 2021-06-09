@@ -16,6 +16,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
@@ -122,7 +123,11 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         mPublisher.setEncodeHandler(new SrsEncodeHandler(this));
         mPublisher.setRtmpHandler(new RtmpHandler(this));
         mPublisher.setRecordHandler(new SrsRecordHandler(this));
-        mPublisher.setPreviewResolution(mWidth, mHeight);
+        int[] re= mPublisher.setPreviewResolution(mWidth, mHeight);
+        ViewGroup.MarginLayoutParams layoutParams= (ViewGroup.MarginLayoutParams )mCameraView.getLayoutParams();
+        layoutParams.width=re[1];
+        layoutParams.height=re[0];
+        mCameraView.setLayoutParams(layoutParams);
         mPublisher.setOutputResolution(mHeight, mWidth); // 这里要和preview反过来
         mPublisher.setVideoHDMode();
         mPublisher.startCamera();

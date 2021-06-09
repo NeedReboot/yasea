@@ -9,7 +9,11 @@ import android.hardware.Camera;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
+import android.os.Build;
+import android.support.annotation.RequiresApi;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.util.Size;
 import android.view.Surface;
 
 import com.seu.magicfilter.base.gpuimage.GPUImageFilter;
@@ -20,6 +24,7 @@ import com.seu.magicfilter.utils.OpenGLUtils;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -54,7 +59,7 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
 
     private Thread worker;
     private final Object writeLock = new Object();
-    private ConcurrentLinkedQueue<IntBuffer> mGLIntBufferCache = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<IntBuffer> mGLIntBufferCache = new ConcurrentLinkedQueue<>();
     private PreviewCallback mPrevCb;
     private CameraCallbacksHandler cameraCallbacksHandler = new CameraCallbacksHandler();
 
@@ -146,7 +151,13 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
         this.mCamera.setPreviewCallback(previewCallback);
     }
 
-    public int[] setPreviewResolution(int width, int height) {                
+    /**
+     * 设置预览尺寸
+     * @param width
+     * @param height
+     * @return
+     */
+    public int[] setPreviewResolution(int width, int height) {
         mCamera = openCamera();
         
         mPreviewWidth = width;
@@ -164,6 +175,48 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
         mGLPreviewBuffer = ByteBuffer.allocate(mPreviewWidth * mPreviewHeight * 4);
         mInputAspectRatio = mPreviewWidth > mPreviewHeight ?
             (float) mPreviewWidth / mPreviewHeight : (float) mPreviewHeight / mPreviewWidth;
+
+        return new int[] { mPreviewWidth, mPreviewHeight };
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public List<Size> getPreviewResolutions(){
+        List<Size> sizes=new ArrayList<>();
+        try {
+            mCamera = openCamera();
+            List<Camera.Size> supportedPicResolutions = mCamera.getParameters().getSupportedPreviewSizes();
+            for (Camera.Size size : supportedPicResolutions) {
+                sizes.add(new Size(size.width,size.height));
+            }
+        }
+        catch (Exception e){
+            Log.e(getClass().getSimpleName(), "getPreviewResolutions: ", e);
+        }
+        return sizes;
+    }
+
+    /**
+     * 设置最好的预览尺寸
+     * @return
+     */
+    public int[] setPreviewResolutionBest(){
+        mCamera = openCamera();
+
+        mPreviewWidth = 360;
+        mPreviewHeight = 640;
+        Camera.Size rs = findFitPreResolution(mCamera.getParameters());
+        if (rs != null) {
+            mPreviewWidth = rs.width;
+            mPreviewHeight = rs.height;
+        }
+
+        getHolder().setFixedSize(mPreviewWidth, mPreviewHeight);
+
+        mCamera.getParameters().setPreviewSize(mPreviewWidth, mPreviewHeight);
+
+        mGLPreviewBuffer = ByteBuffer.allocate(mPreviewWidth * mPreviewHeight * 4);
+        mInputAspectRatio = mPreviewWidth > mPreviewHeight ?
+                (float) mPreviewWidth / mPreviewHeight : (float) mPreviewHeight / mPreviewWidth;
 
         return new int[] { mPreviewWidth, mPreviewHeight };
     }
@@ -374,6 +427,33 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
         }
     }
 
+    public static final int ALLOW_PIC_LEN = 2000;
+    /**
+     * 返回合适的预览尺寸参数
+     *
+     * @param cameraParameters
+     * @return
+     */
+    private Camera.Size findFitPreResolution(Camera.Parameters cameraParameters) {
+        List<Camera.Size> supportedPicResolutions = cameraParameters.getSupportedPreviewSizes();
+
+        Camera.Size resultSize = null;
+        for (Camera.Size size : supportedPicResolutions) {
+            if (size.width <= ALLOW_PIC_LEN) {
+                if (resultSize == null) {
+                    resultSize = size;
+                } else if (size.width > resultSize.width) {
+                    resultSize = size;
+                }
+            }
+        }
+        if (resultSize == null) {
+            return supportedPicResolutions.get(0);
+        }
+        return resultSize;
+    }
+
+
     protected Camera openCamera() {
         Camera camera = null;
         if (mCamId < 0) {
@@ -422,15 +502,30 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
         float xdy = (float) resolution.width / (float) resolution.height;
         Camera.Size best = null;
         for (Camera.Size size : mCamera.getParameters().getSupportedPreviewSizes()) {
+            Log.d(getClass().getSimpleName(), "adaptPreviewResolution: width "+size.width+" height:"+size.height);
             if (size.equals(resolution)) {
                 return size;
             }
-            float tmp = Math.abs(((float) size.width / (float) size.height) - xdy);
-            if (tmp < diff) {
-                diff = tmp;
+            float tmp = Math.abs(((float) size.width / (float) size.height));
+            if (tmp == diff) {
                 best = size;
             }
         }
+
+        if (best==null){
+            for (Camera.Size size : mCamera.getParameters().getSupportedPreviewSizes()) {
+                Log.d(getClass().getSimpleName(), "adaptPreviewResolution: width "+size.width+" height:"+size.height);
+                if (size.equals(resolution)) {
+                    return size;
+                }
+                float tmp = Math.abs(((float) size.width / (float) size.height) - xdy);
+                if (tmp < diff) {
+                    diff = tmp;
+                    best = size;
+                }
+            }
+        }
+
         return best;
     }
 

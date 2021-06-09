@@ -10,8 +10,6 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -146,11 +144,12 @@ public class RtmpConnection implements RtmpPublisher {
 
             @Override
             public void run() {
+                Log.d(TAG, "starting main rx handler loop");
                 try {
-                    Log.d(TAG, "starting main rx handler loop");
                     handleRxPacketLoop();
-                } catch (IOException ex) {
-                    Logger.getLogger(RtmpConnection.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                catch (Exception e){
+                    Log.e(TAG,e.getMessage());
                 }
             }
         });
@@ -510,7 +509,7 @@ public class RtmpConnection implements RtmpPublisher {
         }
     }
 
-    private void handleRxPacketLoop() throws IOException {
+    private void handleRxPacketLoop()  {
         // Handle all queued received RTMP packets
         while (!Thread.interrupted()) {
             try {
@@ -666,7 +665,7 @@ public class RtmpConnection implements RtmpPublisher {
 
     @Override
     public final String getServerId() {
-        return serverId == null ? "" : (String)serverId.getValue();
+        return serverId == null ? "" : serverId.getValue();
     }
 
     @Override

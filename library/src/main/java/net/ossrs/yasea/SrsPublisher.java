@@ -262,9 +262,10 @@ public class SrsPublisher {
         return mCameraView.getCamera();
     }     
 
-    public void setPreviewResolution(int width, int height) {
-        int resolution[] = mCameraView.setPreviewResolution(width, height);
+    public int[] setPreviewResolution(int width, int height) {
+        int[] resolution = mCameraView.setPreviewResolution(width, height);
         mEncoder.setPreviewResolution(resolution[0], resolution[1]);
+        return resolution;
     }
 
     public void setOutputResolution(int width, int height) {
